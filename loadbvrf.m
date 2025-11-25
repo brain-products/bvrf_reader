@@ -141,7 +141,7 @@ else
         error('Invalid sampleRange interval')
     end
 
-    precisionMap = struct('int16', 2, 'int32', 4, 'int64', 8, 'single', 4, 'double', 8);
+    precisionMap = struct('int16', 2, 'int32', 4, 'single', 4, 'double', 8);
     if ~isfield(precisionMap, precision)
         error('EEGModality.BVRFFiles.DataFile.NumericDataType is not supported by the reader')
     end
