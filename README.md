@@ -62,11 +62,7 @@ The GUI shows:
   - Channel index selection
   - Marker and impedance import
 
-Screenshot placeholder:
-
-```
-[Insert GUI screenshot here: docs/bvrf_ui_1.png]
-```
+![image](docs/bvrf_ui_1.png)
 
 ---
 
