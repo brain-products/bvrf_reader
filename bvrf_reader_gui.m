@@ -98,6 +98,7 @@ geometry = { ...
     [1]           ... %11  Channels edit
     [1]           ... %12  "Additional data to import"
     [0.9 0.9]     ... %13  Markers / Impedances
+    [1]           ... %14  Use Poly
     };
 
 vertval =  1;
@@ -117,6 +118,7 @@ geomvert = [ ...
     vertval ...     % Channels edit
     vertval+0.5 ... % "Additional data" label
     vertval ...     % checkboxes
+    vertval ...     % checkbox poly
     ];
 
 % UILIST  (order matters)
@@ -174,7 +176,7 @@ uilist{end+1} = {'style','text','string','Channels','fontweight','bold'};
 uilist{end+1} = {'style','edit','string','','tag','edit_channels'};
 
 %15: Additional data label
-uilist{end+1} = {'style','text','string','Additional data to import','fontweight','bold'};
+uilist{end+1} = {'style','text','string','Additional data and calibrations','fontweight','bold'};
 
 %16: Markers / Impedances checkboxes
 uilist{end+1} = {'style','checkbox','string','Markers', ...
@@ -187,6 +189,11 @@ uilist{end-1}{end+1} = 'enable';  uilist{end-1}{end+1} = 'on';
 if ~info.hasImpedances
     uilist{end}{end+1}   = 'enable';  uilist{end}{end+1}   = 'off'; % disable box if data not present
 end
+
+%17: Use Poly checkboxes
+uilist{end+1} = {'style','checkbox','string','Apply Sensor Calibration', ...
+                 'value',true,'tag','cb_usepoly'};
+
 
 % Call inputgui
 % =========================================================
@@ -240,4 +247,6 @@ end
 % Markers and Impedances
 cfg.flagImportMarkers    = logical(result{7});
 cfg.flagImportImpedances = logical(result{8}) && info.hasImpedances;
+
+cfg.usePoly = logical(result{9});
 end
