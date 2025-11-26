@@ -24,6 +24,9 @@ function [hdr, ALLEEG] = eeg_loadbvrf(hdrPath, hdrFileName, varargin)
 %                            participants, only the participant whose
 %                            Channels(k).ParticipantId matches this value
 %                            is loaded into ALLEEG.
+%   'usePoly'              - true/false (default: true). Use polynomial
+%                            information in sensors (if exist) to convert sensor 
+%                            output to physical quantity
 %
 % Outputs:
 %   hdr        - Parsed BVRF header (struct from jsondecode).
@@ -91,6 +94,7 @@ try g.flagImportImpedances;    catch, g.flagImportImpedances  = false;  end
 try g.flagMetadata;            catch, g.flagMetadata          = false;  end
 try g.verbose;                 catch, g.verbose               = false;  end
 try g.participantId;           catch, g.participantId         = [];     end
+try g.usePoly;                 catch, g.usePoly               = true;   end
 
 %% ---------------------------------------------------------------------
 %   File checks
@@ -242,11 +246,19 @@ end
 channels = normalizeObjectArray(hdr.EEGModality.Channels, 'Channels');
 
 for k = 1:nChannels
-    if isfield(channels{k}, 'Coefficients')
-        warning('%s -> post-processing Coefficients is not supported', channels{k}.Name);
-    end
-    if isfield(channels{k}, 'ResolutionPerBit')
-        data(k, :) = channels{k}.ResolutionPerBit * double(data(k, :));
+    ResolutionPerBit = safe_get(channels{k}, 'ResolutionPerBit', 1);
+    % Extract coefficients (if any)
+    [hasPoly, num, denom] = bvrfGetChannelCoeffs(channels{k});
+
+    if hasPoly && g.usePoly
+        % MQ(NV) = polynomial(NV, ResolutionPerBit, Coeficients)
+        data(k, :) = evalRationalPolyAscending(double(data(k, :)), num, denom, ResolutionPerBit);
+        if g.verbose
+            fprintf('Coefficients applied to Channel: %d \n', k);
+        end
+    else
+        % MQ = NV * RE
+        data(k, :) = double(data(k, :)) .* ResolutionPerBit;
     end
 end
 
@@ -675,6 +687,40 @@ end
 validMask = arrayfun(@(e) ~isempty(e.latency) && isfinite(e.latency), events);
 events    = events(validMask);
 
+end
+
+
+%% =====================================================================
+%   Helper: Get Channels coeficients
+% =====================================================================
+function [hasPoly, num, denom] = bvrfGetChannelCoeffs(chan)
+
+    hasPoly = false;
+    num   = [];
+    denom = [];
+
+    if ~isfield(chan, 'Coefficients') || isempty(chan.Coefficients)
+        return;
+    end
+
+    if ~isfield(chan.Coefficients, 'Num') || isempty(chan.Coefficients.Num)
+        return;
+    end
+
+    num = chan.Coefficients.Num(:)';
+
+    if isfield(chan.Coefficients, 'Denom') && ~isempty(chan.Coefficients.Denom)
+        denom = chan.Coefficients.Denom(:)';
+    else
+        denom = 1;   % default denominator
+    end
+
+    % Default identity polynomial (spec default): Num = [0 1], Denom = [1]
+    defaultNum = [0 1];
+    defaultDen = 1;
+
+    isIdentity = isequal(num, defaultNum) && isequal(denom, defaultDen) ;
+    hasPoly = ~isIdentity;
 end
 
 %% =====================================================================

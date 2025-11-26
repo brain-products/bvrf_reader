@@ -28,7 +28,12 @@
 %                            impedances were recorded. (Default: False)
 %
 %   'participantId'          - If dataset includes multiple participants, 
-%                              you can select one by provindg its ID
+%                              you can select one by provindg its ID. Empty [] reads all.
+%                             (Deault: [])
+%
+%   'usePoly'                - true/false Use polynomial
+%                              information in sensors (if exist) to convert sensor 
+%                              output to physical quantity. (Default: true)
 %
 % Outputs:
 %   ALLEEG - Cell array of EEGLAB EEG structures (one per selected participant)
@@ -84,6 +89,8 @@ try g.sampleInterval;          catch, g.sampleInterval        =  [];    end
 try g.channelIndx;             catch, g.channelIndx           =  [];    end
 try g.flagImportMarkers;       catch, g.flagImportMarkers     =  true;  end
 try g.flagImportImpedances;    catch, g.flagImportImpedances  =  false; end
+try g.usePoly;                 catch, g.usePoly               = true;   end
+
 
 % Pick Header file if not provided
 if nargin < 2
@@ -170,12 +177,14 @@ if nargin < 2
     info.hasImpedances = isfield(hdr.EEGModality.BVRFFiles, 'ImpedanceFile');
     % --
     cfg = bvrf_reader_gui(info); % Launch UI
+    if isempty(cfg), return, end
 
     g.sampleInterval = cfg.sampleInterval;
     g.channelIndx = cfg.channelIndx;
     g.flagImportMarkers = cfg.flagImportMarkers;
     g.flagImportImpedances = cfg.flagImportImpedances';
     g.participantId = cfg.participantId;
+    g.usePoly = cfg.usePoly;
 end
 
 %% HDR to EEG structure matching (From here on , the code is independent of the calling way)
@@ -184,6 +193,7 @@ end
                                                          'flagImportMarkers', g.flagImportMarkers,...
                                                          'flagImportImpedances', g.flagImportImpedances,...
                                                          'participantId', g.participantId,...
+                                                         'usePoly', g.usePoly,...
                                                          'verbose',true);
 
 for isubj = 1:numel(ALLEEG)
