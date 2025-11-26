@@ -23,10 +23,8 @@ The plugin consists of three main functions:
 3. **`eeg_loadbvrf`**  
    Low-level loader: reads BVRF files and returns EEGLAB `EEG` structs.
 
----
 
 ## Installation
-
 
 ### EEGLAB
 1. Copy the plugin folder into your EEGLAB `plugins` directory:
@@ -36,7 +34,6 @@ The plugin consists of three main functions:
 2. Start or restart EEGLAB.
 3. You should now see a menu entry:  
    **File → Import data → From BrainVision (BVRF)...**
-
 
 ### MATLAB
   Do not need installation. Use the function eeg_loadbvrf directly.
@@ -61,10 +58,10 @@ The GUI shows:
   - Sample interval import (samples or seconds)
   - Channel index selection
   - Marker and impedance import
+  - Apply sensor calibration if coefficients are present.
 
 ![image](docs/bvrf_ui_1.png)
 
----
 
 ## 2. Using `pop_loadbvrf` (with GUI or scripting)
 
@@ -84,6 +81,7 @@ The GUI shows:
 | `flagImportMarkers` | `true`/`false` (default true). |
 | `flagImportImpedances` | `true`/`false` (default false). |
 | `participantId` | Import only this participant. |
+| `usePoly` | `true`/`false` (default: true). Use channels coefficients to calibrate sensor measurements.  |
 
 ### Example
 
@@ -93,8 +91,6 @@ The GUI shows:
     'channelIndx', 1:32, ...
     'flagImportMarkers', true);
 ```
-
----
 
 ## 3. Using `eeg_loadbvrf` directly (low-level loader)
 
@@ -113,8 +109,6 @@ The GUI shows:
     'verbose', true);
 ```
 
----
-
 ## How BVRF fields map to EEGLAB
 
 - **Sampling rate** → `EEG.srate`
@@ -125,13 +119,12 @@ The GUI shows:
 - **Impedances** → stored in `EEG.etc.impedances`
 - **Full header** → stored in `EEG.etc.bvrf_header`
 
----
+
 
 ## Known limitations
 
-- Polynomial `Coefficients` from BVRF are not yet applied beyond `ResolutionPerBit`.
-
----
+- Importing fiducials coordinates is not supported currently
+- Create post processing function to re-evaluete the sensors data given a new set of coefficients.
 
 ## License
 MIT
