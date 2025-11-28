@@ -25,7 +25,7 @@ function [hdr, ALLEEG] = eeg_loadbvrf(hdrPath, hdrFileName, varargin)
 %                            Channels(k).ParticipantId matches this value
 %                            is loaded into ALLEEG.
 %   'usePoly'              - true/false (default: true). Use polynomial
-%                            information in sensors (if exist) to convert sensor 
+%                            information in sensors (if exist) to convert sensor
 %                            output to physical quantity
 %
 % Outputs:
@@ -44,17 +44,17 @@ function [hdr, ALLEEG] = eeg_loadbvrf(hdrPath, hdrFileName, varargin)
 %         Ramon Martinez-Cancino, Brain Products GmbH, 2025
 %
 % Copyright (C) 2025 Brain Products GmbH
-% 
+%
 % Permission is hereby granted, free of charge, to any person obtaining a copy
 % of this software and associated documentation files (the "Software"), to deal
 % in the Software without restriction, including without limitation the rights
 % to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 % copies of the Software, and to permit persons to whom the Software is
 % furnished to do so, subject to the following conditions:
-% 
+%
 % The above copyright notice and this permission notice shall be included in all
 % copies or substantial portions of the Software.
-% 
+%
 % THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 % IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 % FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -73,12 +73,12 @@ if nargin < 2
 end
 
 % Options
-g = struct;
+opt = struct;
 try
     options = varargin;
     if ~isempty(options)
         for i = 1:2:numel(options)
-            g.(options{i}) = options{i+1};
+            opt.(options{i}) = options{i+1};
         end
     end
 catch
@@ -87,14 +87,14 @@ catch
 end
 
 % Defaults
-try g.sampleInterval;          catch, g.sampleInterval        = [];     end
-try g.channelIndx;             catch, g.channelIndx           = [];     end
-try g.flagImportMarkers;       catch, g.flagImportMarkers     = true;   end
-try g.flagImportImpedances;    catch, g.flagImportImpedances  = false;  end
-try g.flagMetadata;            catch, g.flagMetadata          = false;  end
-try g.verbose;                 catch, g.verbose               = false;  end
-try g.participantId;           catch, g.participantId         = [];     end
-try g.usePoly;                 catch, g.usePoly               = true;   end
+try opt.sampleInterval;          catch, opt.sampleInterval        = [];     end
+try opt.channelIndx;             catch, opt.channelIndx           = [];     end
+try opt.flagImportMarkers;       catch, opt.flagImportMarkers     = true;   end
+try opt.flagImportImpedances;    catch, opt.flagImportImpedances  = false;  end
+try opt.flagMetadata;            catch, opt.flagMetadata          = false;  end
+try opt.verbose;                 catch, opt.verbose               = false;  end
+try opt.participantId;           catch, opt.participantId         = [];     end
+try opt.usePoly;                 catch, opt.usePoly               = true;   end
 
 %% ---------------------------------------------------------------------
 %   File checks
@@ -106,21 +106,21 @@ markerFile = fullfile(hdrPath, [fname '.bvrm']);
 impFile    = fullfile(hdrPath, [fname '.bvri']);
 
 if ~exist(hdrFile,  "file"), error("Input header file doesn't exist"); end
-if ~exist(dataFile, 'file') && ~g.flagMetadata
+if ~exist(dataFile, 'file') && ~opt.flagMetadata
     error('Data file is missing');
 end
 
-if g.flagImportMarkers && ~exist(markerFile, 'file')
+if opt.flagImportMarkers && ~exist(markerFile, 'file')
     warning('Marker file is missing; markers will not be imported.');
 end
-if g.flagImportImpedances && ~exist(impFile, 'file')
+if opt.flagImportImpedances && ~exist(impFile, 'file')
     warning('Impedance file is missing; impedances will not be imported.');
 end
 
 %% ---------------------------------------------------------------------
 %   Read and parse header
 % ----------------------------------------------------------------------
-if g.verbose
+if opt.verbose
     disp(['Reading header: ' hdrFile]);
 end
 txt = fileread(hdrFile);
@@ -168,8 +168,8 @@ catch
 end
 
 % If only metadata requested, stop here.
-if g.flagMetadata
-    if g.verbose
+if opt.flagMetadata
+    if opt.verbose
         disp('flagMetadata is true: returning header only');
     end
     ALLEEG = {};
@@ -179,11 +179,11 @@ end
 %% ---------------------------------------------------------------------
 %   Read data (.bvrd)
 % ----------------------------------------------------------------------
-if g.verbose
+if opt.verbose
     disp(['Reading data: ' dataFile]);
 end
 
-if isempty(g.sampleInterval)
+if isempty(opt.sampleInterval)
     % Read all samples (try fast path)
     try
         fid = fopen(dataFile, 'r');
@@ -218,7 +218,7 @@ if isempty(g.sampleInterval)
     end
 else
     % Read only requested sample interval
-    if numel(g.sampleInterval) < 2
+    if numel(opt.sampleInterval) < 2
         error('Invalid sampleInterval; must be [first last].');
     end
 
@@ -229,8 +229,8 @@ else
     nBytes = precisionMap.(precision);
 
     fid = fopen(dataFile, 'r');
-    fseek(fid, g.sampleInterval(1) * nChannels * nBytes, 'bof');
-    vec = fread(fid, g.sampleInterval(2), precision, 'ieee-le');
+    fseek(fid, opt.sampleInterval(1) * nChannels * nBytes, 'bof');
+    vec = fread(fid, opt.sampleInterval(2), precision, 'ieee-le');
     fclose(fid);
 
     n        = length(vec);
@@ -250,10 +250,10 @@ for k = 1:nChannels
     % Extract coefficients (if any)
     [hasPoly, num, denom] = bvrfGetChannelCoeffs(channels{k});
 
-    if hasPoly && g.usePoly
+    if hasPoly && opt.usePoly
         % MQ(NV) = polynomial(NV, ResolutionPerBit, Coeficients)
         data(k, :) = evalRationalPolyAscending(double(data(k, :)), num, denom, ResolutionPerBit);
-        if g.verbose
+        if opt.verbose
             fprintf('Coefficients applied to Channel: %d \n', k);
         end
     else
@@ -298,8 +298,8 @@ end
 %% ---------------------------------------------------------------------
 %   Optional: select one participant by participantId
 % ----------------------------------------------------------------------
-if ~isempty(g.participantId) && nParticipants>1
-    targetId = char(string(g.participantId));
+if ~isempty(opt.participantId) && nParticipants>1
+    targetId = char(string(opt.participantId));
     idxKeep  = strcmp(participantId, targetId);
 
     if ~any(idxKeep)
@@ -312,15 +312,15 @@ if ~isempty(g.participantId) && nParticipants>1
     channels      = channels(idxKeep);
     nParticipants = numel(data); % likely 1, but allow >1 if header uses same ID multiple times
 
-    if g.verbose
+    if opt.verbose
         fprintf('Selected participantId = %s (N=%d).\n', targetId, nParticipants);
     end
 end
 
 %% Apply channel index selection per participant (if requested)
-if ~isempty(g.channelIndx)
+if ~isempty(opt.channelIndx)
     for p = 1:nParticipants
-        chanIdx = g.channelIndx;
+        chanIdx = opt.channelIndx;
         if max(chanIdx) > size(data{p},1)
             error('Requested channelIndx exceeds number of channels for participant %d.', p);
         end
@@ -333,8 +333,8 @@ end
 %   Read markers (.bvrm) and split per participant
 % ----------------------------------------------------------------------
 markers = {};
-if g.flagImportMarkers && exist(markerFile, 'file')
-    if g.verbose
+if opt.flagImportMarkers && exist(markerFile, 'file')
+    if opt.verbose
         disp(['Reading markers: ' markerFile]);
     end
     lines = readlines(markerFile);
@@ -382,7 +382,7 @@ if g.flagImportMarkers && exist(markerFile, 'file')
                 mk = markersAll(k);
 
                 if ~isfield(mk, 'ParticipantId') || isempty(mk.ParticipantId) || ...
-                       contains(lower(string(mk.Comment)), 'all participants')
+                        contains(lower(string(mk.Comment)), 'all participants')
                     markerMask(:, k) = true;
                 else
                     idx = ismember(participantId, mk.ParticipantId);
@@ -399,7 +399,7 @@ if g.flagImportMarkers && exist(markerFile, 'file')
             markers = markersCell;
         end
     end
-elseif g.flagImportMarkers
+elseif opt.flagImportMarkers
     % File missing but flagImportMarkers true -> keep empty cell
     markers = cell(nParticipants, 1);
 end
@@ -408,8 +408,8 @@ end
 %   Read impedances (.bvri)
 % ----------------------------------------------------------------------
 impedances = [];
-if g.flagImportImpedances && exist(impFile, 'file')
-    if g.verbose
+if opt.flagImportImpedances && exist(impFile, 'file')
+    if opt.verbose
         disp(['Reading impedances: ' impFile]);
     end
     lines = readlines(impFile);
@@ -437,7 +437,7 @@ if g.flagImportImpedances && exist(impFile, 'file')
                     continue;
                 end
                 for k = 1:nCols
-                    impedances.(header(k)){end+1} = content(k); %#ok<AGROW>
+                    impedances.(header(k)){end+1} = content(k);
                 end
             catch ME
                 disp(ME);
@@ -448,7 +448,7 @@ if g.flagImportImpedances && exist(impFile, 'file')
 end
 
 %% ---------------------------------------------------------------------
-%   Build EEGLAB EEG structs per participant
+%   Build EEG structs per participant
 % ----------------------------------------------------------------------
 ALLEEG = cell(1, nParticipants);
 
@@ -462,6 +462,7 @@ for p = 1:nParticipants
     EEG.trials = 1;
     EEG.xmin   = 0;
     EEG.xmax   = EEG.pnts / EEG.srate;
+    EEG.comments = [ 'Original file: ' hdrFile ];
 
     % --- subject / condition / setname ---
     subjId = char(string(participantId{p}));
@@ -496,12 +497,12 @@ for p = 1:nParticipants
 
     % --- markers -> EEG.event ---
     EEG.event = [];
-    if g.flagImportMarkers && ~isempty(markers) && numel(markers) >= p && ~isempty(markers{p})
+    if opt.flagImportMarkers && ~isempty(markers) && numel(markers) >= p && ~isempty(markers{p})
         EEG.event = markers_to_eeg_events(markers{p}, EEG.srate);
     end
 
     % --- impedances ---
-    if g.flagImportImpedances && ~isempty(impedances)
+    if opt.flagImportImpedances && ~isempty(impedances)
         EEG.etc.impedances = impedances;
     end
 
@@ -511,7 +512,6 @@ for p = 1:nParticipants
 
     ALLEEG{p} = EEG;
 end
-
 end
 
 %% =====================================================================
@@ -523,10 +523,10 @@ chStruct = channelsCell;
 nCh      = numel(chStruct);
 
 chanlocs = struct('labels', cell(1,nCh), ...
-                  'type',   cell(1,nCh), ...
-                  'X',      cell(1,nCh), ...
-                  'Y',      cell(1,nCh), ...
-                  'Z',      cell(1,nCh));
+    'type',   cell(1,nCh), ...
+    'X',      cell(1,nCh), ...
+    'Y',      cell(1,nCh), ...
+    'Z',      cell(1,nCh));
 
 % Normalize electrodes and sensors from header
 electrodes = normalizeObjectArray(eegMod.Electrodes, 'Electrodes');
@@ -641,27 +641,51 @@ end
 
 nEv    = numel(markerStructArray);
 events = struct('type', cell(1,nEv), ...
-                'latency', cell(1,nEv), ...
-                'comment', cell(1,nEv));
+    'latency', cell(1,nEv), ...
+    'comment', cell(1,nEv),...
+    'bv_type', cell(1,nEv),...
+    'bv_StartEndId',cell(1,nEv), ...
+    'bv_channel', cell(1, nEv));
 
 for k = 1:nEv
     mk = markerStructArray(k);
 
-    % type
-    if isfield(mk, 'MarkerType') && ~isempty(mk.MarkerType)
-        typeStr = char(string(mk.MarkerType));
-    elseif isfield(mk, 'Type') && ~isempty(mk.Type)
-        typeStr = char(string(mk.Type));
+    % BV type
+    if isfield(mk, 'Type') && ~isempty(mk.Type)
+        bvtypeStr = char(string(mk.Type));
     else
-        typeStr = '';
+        fprintf(2,'Field ''Type''  in the Marker structure is <strong>Required </strong>, but is not provided \nWe are Replacing Marker Type with generic name: ''Marker''\n')
+        bvtypeStr = 'Marker';
+    end
+
+    % General type
+    bvcode = safe_get(mk, 'Code', []);
+    bvvalue = safe_get(mk, 'Value', []);
+
+    if bvcode == '', bvcode = []; end
+    if bvvalue == '', bvvalue = []; end
+
+    if ~isempty(bvcode) && ~isempty(bvvalue)
+        typeStr = strcat( bvtypeStr, char('/'), char(bvcode), char(num2str(bvvalue)));
+
+    elseif ~isempty(bvcode) && isempty(bvvalue)
+        typeStr = strcat( bvtypeStr, char('/'), char(bvcode));
+
+    elseif isempty(bvcode) && ~isempty(bvvalue)
+        typeStr = strcat( bvtypeStr, char('/'), char(num2str(bvvalue)));
+
+    else
+        typeStr = bvtypeStr;
     end
 
     % latency: prefer Sample, fallback to SampleIndex, fallback to Time [s]
     latency = NaN;
     if isfield(mk, 'Sample') && ~isempty(mk.Sample)
         latency = str2double(string(mk.Sample));
+
     elseif isfield(mk, 'SampleIndex') && ~isempty(mk.SampleIndex)
         latency = str2double(string(mk.SampleIndex));
+
     elseif isfield(mk, 'Time') && ~isempty(mk.Time)
         t = str2double(string(mk.Time));
         latency = 1 + round(t * srate); % seconds -> sample index
@@ -671,16 +695,19 @@ for k = 1:nEv
         continue; % skip invalid
     end
 
-    % comment
-    if isfield(mk, 'Comment') && ~isempty(mk.Comment)
-        commentStr = char(string(mk.Comment));
-    else
-        commentStr = '';
-    end
+    %% Output Fields
+    % Standard EEGLAB  fields
+    events(k).type           = typeStr;
+    events(k).latency        = latency;
+    events(k).comment        = safe_get(mk, 'Comment', '');
 
-    events(k).type    = typeStr;
-    events(k).latency = latency;
-    events(k).comment = commentStr;
+    % BV Specific fields
+    events(k).bv_type        = bvtypeStr;
+    events(k).bv_code        = safe_get(mk, 'Code', '');
+    events(k).bv_value       = safe_get(mk, 'Value', '');
+    events(k).bv_StartEndId  = safe_get(mk, 'StartEndId', '');
+    events(k).bv_channel     = safe_get(mk, 'Channel', '');
+
 end
 
 % Remove any incomplete events (where latency is NaN)
@@ -695,32 +722,32 @@ end
 % =====================================================================
 function [hasPoly, num, denom] = bvrfGetChannelCoeffs(chan)
 
-    hasPoly = false;
-    num   = [];
-    denom = [];
+hasPoly = false;
+num   = [];
+denom = [];
 
-    if ~isfield(chan, 'Coefficients') || isempty(chan.Coefficients)
-        return;
-    end
+if ~isfield(chan, 'Coefficients') || isempty(chan.Coefficients)
+    return;
+end
 
-    if ~isfield(chan.Coefficients, 'Num') || isempty(chan.Coefficients.Num)
-        return;
-    end
+if ~isfield(chan.Coefficients, 'Num') || isempty(chan.Coefficients.Num)
+    return;
+end
 
-    num = chan.Coefficients.Num(:)';
+num = chan.Coefficients.Num(:)';
 
-    if isfield(chan.Coefficients, 'Denom') && ~isempty(chan.Coefficients.Denom)
-        denom = chan.Coefficients.Denom(:)';
-    else
-        denom = 1;   % default denominator
-    end
+if isfield(chan.Coefficients, 'Denom') && ~isempty(chan.Coefficients.Denom)
+    denom = chan.Coefficients.Denom(:)';
+else
+    denom = 1;   % default denominator
+end
 
-    % Default identity polynomial (spec default): Num = [0 1], Denom = [1]
-    defaultNum = [0 1];
-    defaultDen = 1;
+% Default identity polynomial (spec default): Num = [0 1], Denom = [1]
+defaultNum = [0 1];
+defaultDen = 1;
 
-    isIdentity = isequal(num, defaultNum) && isequal(denom, defaultDen) ;
-    hasPoly = ~isIdentity;
+isIdentity = isequal(num, defaultNum) && isequal(denom, defaultDen) ;
+hasPoly = ~isIdentity;
 end
 
 %% =====================================================================
