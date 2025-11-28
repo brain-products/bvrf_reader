@@ -76,20 +76,20 @@ try
     options = varargin;
     if ~isempty( varargin )
         for i = 1:2:numel(options)
-            g.(options{i}) = options{i+1};
+            opt.(options{i}) = options{i+1};
         end
     else
-        g = [];
+        opt = [];
     end
 catch
     disp('pop_pac() error: calling convention {''key'', value, ... } error'); return;
 end
-try g.participantId;           catch, g.participantId         = [];     end
-try g.sampleInterval;          catch, g.sampleInterval        =  [];    end
-try g.channelIndx;             catch, g.channelIndx           =  [];    end
-try g.flagImportMarkers;       catch, g.flagImportMarkers     =  true;  end
-try g.flagImportImpedances;    catch, g.flagImportImpedances  =  false; end
-try g.usePoly;                 catch, g.usePoly               = true;   end
+try opt.participantId;           catch, opt.participantId         = [];     end
+try opt.sampleInterval;          catch, opt.sampleInterval        =  [];    end
+try opt.channelIndx;             catch, opt.channelIndx           =  [];    end
+try opt.flagImportMarkers;       catch, opt.flagImportMarkers     =  true;  end
+try opt.flagImportImpedances;    catch, opt.flagImportImpedances  =  false; end
+try opt.usePoly;                 catch, opt.usePoly               = true;   end
 
 
 % Pick Header file if not provided
@@ -126,7 +126,6 @@ if nargin < 2
     bps = bytesPerSample.(info.dataType);
 
     % 3. DataFile size
-    
     fileInfo = dir(dataFile);
     fileBytes = fileInfo.bytes;
 
@@ -179,31 +178,31 @@ if nargin < 2
     cfg = bvrf_reader_gui(info); % Launch UI
     if isempty(cfg), return, end
 
-    g.sampleInterval = cfg.sampleInterval;
-    g.channelIndx = cfg.channelIndx;
-    g.flagImportMarkers = cfg.flagImportMarkers;
-    g.flagImportImpedances = cfg.flagImportImpedances';
-    g.participantId = cfg.participantId;
-    g.usePoly = cfg.usePoly;
+    opt.sampleInterval = cfg.sampleInterval;
+    opt.channelIndx = cfg.channelIndx;
+    opt.flagImportMarkers = cfg.flagImportMarkers;
+    opt.flagImportImpedances = cfg.flagImportImpedances';
+    opt.participantId = cfg.participantId;
+    opt.usePoly = cfg.usePoly;
 end
 
 %% HDR to EEG structure matching (From here on , the code is independent of the calling way)
- [~, ALLEEG] = eeg_loadbvrf(hdrPath, hdrFileName,'sampleInterval', g.sampleInterval,...
-                                                         'channelIndx', g.channelIndx, ...
-                                                         'flagImportMarkers', g.flagImportMarkers,...
-                                                         'flagImportImpedances', g.flagImportImpedances,...
-                                                         'participantId', g.participantId,...
-                                                         'usePoly', g.usePoly,...
+ [~, ALLEEGtmp] = eeg_loadbvrf(hdrPath, hdrFileName,'sampleInterval', opt.sampleInterval,...
+                                                         'channelIndx', opt.channelIndx, ...
+                                                         'flagImportMarkers', opt.flagImportMarkers,...
+                                                         'flagImportImpedances', opt.flagImportImpedances,...
+                                                         'participantId', opt.participantId,...
+                                                         'usePoly', opt.usePoly,...
                                                          'verbose',true);
 
-for isubj = 1:numel(ALLEEG)
+for isubj = 1:numel(ALLEEGtmp)
     try
-        EEG = eeg_checkset(EEG);
+        ALLEEG{isubj} = eeg_checkset(ALLEEGtmp{isubj}); %#ok<AGROW>
     catch
     end
 end
 
 if nargout == 2
-    com = sprintf('ALLEEG = pop_loadbvrf(''%s'', ''%s'',''participantID'', %s, ''sampleInterval'', %s, ''channelIndx'',%s, ''flagImportMarkers'',  %s, ''flagImportImpedances'', %s);', ...
-           hdrPath, hdrFileName, g.participantId, mat2str(g.sampleInterval), mat2str(g.channelIndx), mat2str(g.flagImportMarkers),mat2str(g.flagImportImpedances));
+    com = sprintf('ALLEEG = pop_loadbvrf(''%s'', ''%s'',''participantID'', %s, ''sampleInterval'', %s, ''channelIndx'',%s, ''flagImportMarkers'',  %s, ''flagImportImpedances'', %s, ''usePoly'', %s);', ...
+           hdrPath, hdrFileName, opt.participantId, mat2str(opt.sampleInterval), mat2str(opt.channelIndx), mat2str(opt.flagImportMarkers),mat2str(opt.flagImportImpedances), mat2str(opt.usePoly));
 end
