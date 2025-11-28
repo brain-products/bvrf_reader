@@ -119,6 +119,22 @@ The GUI shows:
 - **Impedances** → stored in `EEG.etc.impedances`
 - **Full header** → stored in `EEG.etc.bvrf_header`
 
+### Importing BVRF Markers to EEGLAB event structure
+The BVRF file contains a detailed information of the markers (events) that can not be match to the standard three-structure-fields of the EEG structure in EEGLAB. For this reason, in adition to populating these three fields (type, latemncy and comment) we included most of the native BVRF marker information in the folowing fields:
+ 
+| EEGLAB (EEG.event.) | BVRF | Description|
+|-------------------|------|------------|
+|bv_type| Type|BV Marker type|
+|bv_code| Code |Marker code (e.g., R or S for response or stimulus respectively)|
+|bv_value|Value|Marker value to differentiate markers with the same code|
+|bv_StartEndId|StartEndId|GUID to identify start-end marker pairs|
+|bv_channel|Channel|Channels where the Marker was assigned to. An empty value indicate the marker correspond all the channels|
+
+    events(k).bv_type        = bvtypeStr;
+    events(k).bv_code        = safe_get(mk, 'Code', '');
+    events(k).bv_value       = safe_get(mk, 'Value', '');
+    events(k).bv_StartEndId  = safe_get(mk, 'StartEndId', '');
+    events(k).bv_channel     = safe_get(mk, 'Channel', '');
 
 
 ## Known limitations
