@@ -1,5 +1,5 @@
 % bvrf_reader_gui() - BVRF Reader UI
-% Takes an strcutrure with fields specifeid below and laucng a GUI for the
+% Takes an structure with fields specified below and launch a GUI for the
 % reader. 
 %
 % Usage:
