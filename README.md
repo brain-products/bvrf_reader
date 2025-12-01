@@ -1,6 +1,6 @@
 # BrainVision BVRF Reader – MATLAB/EEGLAB Plugin
 
-This plugin lets you import BrainVision Recording Format (BVRF) datasets into MATLAB and EEGLAB. It supports the full BVRF 1.0.0 file set:
+This plugin lets you import BrainVision Recording Format (BVRF) datasets into MATLAB and EEGLAB. It supports the full BVRF (https://www.brainproducts.com/support-resources/brainvision-recording-format/) file set:
 
 - Header: `*.bvrh` 
 - Data: `*.bvrd` 
@@ -184,6 +184,8 @@ Markers without a participant ID or marked “all participants” are assigned t
 | `latency`    | Determined in this order: (1) `Sample` (preferred), (2) `SampleIndex`, (3) `Time` converted to samples via `1 + round(Time * srate)`. |
 | `comment`    | BVRF `Comment` field or empty if missing. |
 
+The BVRF is a zero-based data format, meaning that the first element of an array has a zero index. This contrasts with MATLAB, which employs one-indexing, where the first sample has an index of one. As a result, when importing BVRF marker latencies into MATLAB/EEGLAB, it is necessary to adjust for this difference in indexing. This adjustment is particularly important when importing the latencies of the markers, which involves adding one (+1) to account for the difference.
+
 #### 5.2 BVRF-Specific Event Fields
 
 These fields retain the original structure of BVRF markers:
@@ -238,8 +240,9 @@ For each channel:
 
 ## Known limitations
 
-- Importing fiducials coordinates is not supported currently
+- Importing fiducials and anatomical coordinates is not supported currently
 - Create post processing function to re-evaluete the sensors data given a new set of coefficients.
+- Handling of assignation of common sensors in multiple participant reconrdings is not addressed. 
 
 ## License
 MIT
