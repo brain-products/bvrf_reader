@@ -453,7 +453,7 @@ end
 ALLEEG = cell(1, nParticipants);
 
 for p = 1:nParticipants
-    EEG = eeg_emptyset;
+    EEG = emptyset;
 
     % --- core data/time fields ---
     EEG.data   = double(data{p});
@@ -698,7 +698,7 @@ for k = 1:nEv
     %% Output Fields
     % Standard EEGLAB  fields
     events(k).type           = typeStr;
-    events(k).latency        = latency;
+    events(k).latency        = latency + 1; % Adding one to account for the zero indexing of the original value.
     events(k).comment        = safe_get(mk, 'Comment', '');
 
     % BV Specific fields
@@ -788,4 +788,47 @@ if ~isempty(idx)
         X = coords(1); Y = coords(2); Z = coords(3);
     end
 end
+end
+
+function EEG = emptyset()
+EEG.setname     = '';
+EEG.filename    = '';
+EEG.filepath    = '';
+EEG.subject     = '';
+EEG.group       = '';
+EEG.condition   = '';
+EEG.session     = [];
+EEG.comments    = '';
+EEG.nbchan      = 0;
+EEG.trials      = 0;
+EEG.pnts        = 0;
+EEG.srate       = 1;
+EEG.xmin        = 0;
+EEG.xmax        = 0;
+EEG.times       = [];
+EEG.data        = [];
+EEG.icaact      = [];
+EEG.icawinv     = [];
+EEG.icasphere   = [];
+EEG.icaweights  = [];
+EEG.icachansind = [];
+EEG.chanlocs    = [];
+EEG.urchanlocs  = [];
+EEG.chaninfo    = [];
+EEG.ref         = [];
+EEG.event       = [];
+EEG.urevent     = [];
+EEG.eventdescription = {};
+EEG.epoch       = [];
+EEG.epochdescription = {};
+EEG.reject      = [];
+EEG.stats       = [];
+EEG.specdata    = [];
+EEG.specicaact  = [];
+EEG.splinefile  = '';
+EEG.icasplinefile = '';
+EEG.dipfit      = [];
+EEG.history     = '';
+EEG.saved       = 'no';
+EEG.etc         = [];
 end
