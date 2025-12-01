@@ -46,6 +46,7 @@
 %                            'flagImportMarkers', true);
 %
 % Author: Ramon Martinez-Cancino, Brain Products GmbH, 2025
+%         Alejandro Ojeda, Brain Products GmbH, 2025
 %
 % Copyright (C) 2025 Brain Products GmbH
 % 
