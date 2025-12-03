@@ -61,7 +61,7 @@ function [hdr, ALLEEG] = eeg_loadbvrf(hdrPath, hdrFileName, varargin)
 % AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 % LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 % OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-% SOFTWARE.A
+% SOFTWARE.
 
 ALLEEG = {};
 
@@ -268,12 +268,21 @@ end
 if isfield(hdr, 'Participants')
     uniqueIds = cellfun(@(p) p.Id, hdr.Participants, 'UniformOutput', false);
     nParticipants = numel(uniqueIds);
-    participantId = cellfun(@(p) p.ParticipantId, channels, 'UniformOutput', false);
+
+    for ichan =1:numel(channels)
+        participantId{ichan} = safe_get(channels{ichan},'ParticipantId', '');
+    end
 
     dataCell     = cell(nParticipants, 1);
     channelsCell = cell(nParticipants, 1);
+    isUnassigned = cellfun('isempty', participantId);
+
+    if nnz(isUnassigned)~=0 && opt.verbose
+        fprintf('Unassigned channel(s) have been detected: %d.  Proceeding to append to each participant ... \n', nnz(isUnassigned));
+    end
+
     for p = 1:nParticipants
-        idx              = ismember(participantId, uniqueIds{p}) | cellfun('isempty', participantId);
+        idx              = ismember(participantId, uniqueIds{p}) | isUnassigned;
         dataCell{p}      = data(idx, :);
         channelsCell{p}  = channels(idx);
     end
@@ -749,14 +758,6 @@ end
 %% =====================================================================
 %   Generic helpers
 % =====================================================================
-function v = safe_get(s, fn, defaultVal)
-if isstruct(s) && isfield(s, fn) && ~isempty(s.(fn))
-    v = s.(fn);
-else
-    v = defaultVal;
-end
-end
-
 function [X, Y, Z] = lookup_xyz(name, section, electrodes, sensors)
 X = []; Y = []; Z = [];
 if isempty(name)
