@@ -130,7 +130,7 @@ This section describes how `eeg_loadbvrf` converts a BVRF dataset into the `EEG`
 Participants are inferred from `Channels(k).ParticipantId` as well as the presence of the header field `Participants`:
 - If the `Participants` field is present, channels are grouped by participant, resulting in one EEGLAB dataset for each participant ID.  
 - If the `Participants` field is absent, the recording is treated as a single-participant dataset with the ID `participant-1`.
-- In cases with multiple participants, some sensors may be common to all subjects (for example, a luminance sensor). If `Channels(k).ParticipantId` is empty, it indicates that the sensor is common to all subjects in the dataset. In this situation, the current reader responds by duplicating the channel associated with the sensor in all participants' EEG structures. As a result, the number of channels displayed in the UI may not match the final number of channels in the output.
+- In cases with multiple participants, some sensors may be common to all subjects (for example, a luminance sensor). If `Channels(k).ParticipantId` is not present, it indicates that the sensor is common to all subjects in the dataset. In this situation, the current reader responds by duplicating the channel associated with the sensor in all participants' EEG structures. As a result, the number of channels displayed in the UI comprises the regular channels plus the common sensors.
 
 You can optionally import a specific participant via the `participantId` argument.
 
