@@ -241,7 +241,7 @@ For each channel:
 ## Known limitations
 
 - Importing fiducials and anatomical coordinates is not supported currently
-- Create post processing function to re-evaluete the sensors data given a new set of coefficients.
+- Create post processing function to re-evaluate the sensors data given a new set of coefficients.
 
 ## License
 MIT
