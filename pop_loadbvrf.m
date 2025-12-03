@@ -150,7 +150,6 @@ if nargin < 2
     info.participantNames = participantIds;
 
     % Extract channels section
-
     channels = normalizeObjectArray(hdr.EEGModality.Channels, 'EEGModality.Channels');
 
     % Assign channels to participants
@@ -160,10 +159,16 @@ if nargin < 2
     else
         % Count per participant using ParticipantId in channels
         chanCounts = zeros(1, nParticipants);
+        uniqueIds = cellfun(@(p) p.Id, hdr.Participants, 'UniformOutput', false);
+
+        for ichan =1:numel(channels)
+            ChannelsParticipantID{ichan} = safe_get(channels{ichan},'ParticipantId', '');
+        end
+        isUnassigned = cellfun('isempty', ChannelsParticipantID);
+
         for p = 1:nParticipants
-            pid = participantIds{p};
-            ChannelsParticipantID = cellfun(@(c) c.ParticipantId, channels, 'UniformOutput', false);
-            chanCounts(p) = sum(strcmp(ChannelsParticipantID, pid));
+            idx = ismember(ChannelsParticipantID, uniqueIds{p}) | isUnassigned;
+            chanCounts(p) = nnz(idx);
         end
     end
     info.participantChans = chanCounts;
