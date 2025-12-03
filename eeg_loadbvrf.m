@@ -265,19 +265,15 @@ end
 %% ---------------------------------------------------------------------
 %   Split data and channels by ParticipantId
 % ----------------------------------------------------------------------
-if isfield(channels{1}, 'ParticipantId')
-    participantId = cell(nChannels, 1);
-    for k = 1:nChannels
-        participantId{k} = channels{k}.ParticipantId;
-    end
-    uniqueIds     = unique(participantId);
+if isfield(hdr, 'Participants')
+    uniqueIds = cellfun(@(p) p.Id, hdr.Participants, 'UniformOutput', false);
     nParticipants = numel(uniqueIds);
+    participantId = cellfun(@(p) p.ParticipantId, channels, 'UniformOutput', false);
 
     dataCell     = cell(nParticipants, 1);
     channelsCell = cell(nParticipants, 1);
-
     for p = 1:nParticipants
-        idx              = ismember(participantId, uniqueIds{p});
+        idx              = ismember(participantId, uniqueIds{p}) | cellfun('isempty', participantId);
         dataCell{p}      = data(idx, :);
         channelsCell{p}  = channels(idx);
     end
