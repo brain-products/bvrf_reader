@@ -2,10 +2,10 @@ function [hdr, participantId, data, channels, markers, impedances] = loadbvrf(hd
 % readBVRF() - Read data saved in the Brain Vision Recorder format.
 %
 % Usage:
-%   >> [hdr, participantId, data, channels, markers, impedances] = readBVRF(hdrFile, verbose);
+%   >> [hdr, data, markers] = readBVRF(hdrFile, verbose);
 %
 % Inputs:
-%   hdrFile      - Header file (bvrh). Data (.bvrd) and marker (bvrm) files should be in the same folder.
+%   hdrFile      - Hader file (bvrh). Data (.bvrd) and marker (bvrm) files should be in the same folder.
 %   sampleRange  - [first, last] samples that define the interval to read. Enter [] to read all samples.
 %   flagMetadata - Loads only the header metadata.
 %   verbose      - Optional input. Set to true to display messages. 
