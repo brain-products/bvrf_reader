@@ -83,7 +83,7 @@ try
         opt = [];
     end
 catch
-    disp('pop_pac() error: calling convention {''key'', value, ... } error'); return;
+    disp('pop_loadbvrf() error: calling convention {''key'', value, ... } error'); return;
 end
 try opt.participantId;           catch, opt.participantId         = [];     end
 try opt.sampleInterval;          catch, opt.sampleInterval        =  [];    end
@@ -200,12 +200,19 @@ end
                                                          'participantId', opt.participantId,...
                                                          'usePoly', opt.usePoly,...
                                                          'verbose',true);
-
-for isubj = 1:numel(ALLEEGtmp)
-    try
-        ALLEEG{isubj} = eeg_checkset(ALLEEGtmp{isubj}); %#ok<AGROW>
-    catch
+% Validating dataset
+if exist('eeg_checkset','file') == 2
+    for isubj = 1:numel(ALLEEGtmp)
+        try
+            ALLEEG{isubj} = eeg_checkset(ALLEEGtmp{isubj});
+        catch ME
+            warning(['pop_loadbvrf: eeg_checkset failed for dataset: ' num2str(isubj)]);
+            ALLEEG{isubj} = ALLEEGtmp{isubj};
+        end
     end
+else
+    warning('pop_loadbvrf: eeg_checkset not found, skipping dataset validation.');
+    ALLEEG = ALLEEGtmp;
 end
 
 if nargout == 2
