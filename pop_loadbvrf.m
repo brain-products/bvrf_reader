@@ -206,12 +206,12 @@ if exist('eeg_checkset','file') == 2
         try
             ALLEEG{isubj} = eeg_checkset(ALLEEGtmp{isubj});
         catch ME
-            warning(['pop_loadbvrf: eeg_checkset failed for dataset: ' num2str(isubj)]);
+            disp(['pop_loadbvrf: eeg_checkset failed for dataset: ' num2str(isubj)]);
             ALLEEG{isubj} = ALLEEGtmp{isubj};
         end
     end
 else
-    warning('pop_loadbvrf: eeg_checkset not found, skipping dataset validation.');
+    disp('pop_loadbvrf: eeg_checkset not found, skipping dataset validation.');
     ALLEEG = ALLEEGtmp;
 end
 
