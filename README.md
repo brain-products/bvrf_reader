@@ -166,7 +166,22 @@ Coordinates come from **Electrodes** if provided.
 | ----------------------- | ---------------- |
 | `labels`                | `Channels(k).Name`, or fallback `Ch<k>`. |
 | `type`                  | `Channels(k).Type` (e.g., `EEG`, `EOG`, `GSR`, `MISC`). |
-| `X`, `Y`, `Z`           | 3D coordinates if the channel’s `Composition.Plus` points to an electrode with defined coordinates. Otherwise left empty. |
+| `X`, `Y`, `Z`           | 3D coordinates if the channel’s `Composition.Plus` points to an electrode with defined coordinates. Otherwise left empty. Converted to EEGLAB orientation according to `CoordinateSystems.EEGCoordinateSystem` (see below). |
+
+Supported `EEGCoordinateSystem` values:
+
+| Value     | Orientation in file                         | Conversion to EEGLAB (+X nose, +Y left, +Z up) |
+| --------- | ------------------------------------------- | ---------------------------------------------- |
+| `Easycap` | RAS (+X right, +Y anterior, +Z superior)    | `X = Y_file`, `Y = -X_file`, `Z = Z_file`      |
+| `CapTrak` | RAS (+X right, +Y anterior, +Z superior)    | `X = Y_file`, `Y = -X_file`, `Z = Z_file`      |
+| `EEGLAB`  | Already EEGLAB orientation                  | None                                           |
+
+Any other value imports the coordinates unchanged and issues a warning.
+
+To support a new coordinate system, add a row with its name and orientation
+code (e.g. `'MySystem', 'LPS'`) to the table in `coordsys_orientation`
+(`eeg_loadbvrf.m`). Any three-letter orientation code using each of R/L, A/P
+and S/I once is converted to EEGLAB's ALS orientation automatically.
 
 ---
 
