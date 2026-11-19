@@ -76,7 +76,7 @@ The GUI shows:
 
 | Parameter | Description |
 |----------|-------------|
-| `sampleInterval` | `[first last]` sample indices (1‑based). Empty = full dataset. |
+| `sampleInterval` | `[first last]` sample indices, 1‑based and inclusive (`[1 1000]` = first 1000 samples). Empty = full dataset. See [Indexing and sample intervals](#indexing-and-sample-intervals). |
 | `channelIndx` | Vector of channel indices. Empty = all. |
 | `flagImportMarkers` | `true`/`false` (default true). |
 | `flagImportImpedances` | `true`/`false` (default false). |
@@ -87,7 +87,7 @@ The GUI shows:
 
 ```matlab
 [ALLEEG, com] = pop_loadbvrf('/data/', 'rec.bvrh', ...
-    'sampleInterval', [0 100000], ...
+    'sampleInterval', [1 100000], ...
     'channelIndx', 1:32, ...
     'flagImportMarkers', true);
 ```
@@ -104,10 +104,26 @@ The GUI shows:
 
 ```matlab
 [hdr, ALLEEG] = eeg_loadbvrf('/data/', 'rec.bvrh', ...
-    'sampleInterval', [0 600000], ...
+    'sampleInterval', [1 600000], ...
     'flagImportMarkers', true, ...
     'verbose', true);
 ```
+
+## Indexing and sample intervals
+
+BVRF files are **0-based** (the first sample has index 0); MATLAB and EEGLAB are **1-based**. The reader follows one rule:
+
+> Everything you pass in or get back in MATLAB/EEGLAB is **1-based and inclusive**. The conversion to the 0-based BVRF layout happens only when the files are read.
+
+- `sampleInterval = [first last]` reads samples `first` to `last` (both included). `[1 1000]` returns exactly the first 1000 samples; `0` is not a valid index.
+- In the GUI, an interval in **seconds** `[t1 t2]` is converted to samples `[round(t1*srate)+1, round(t2*srate)]`, where `t = 0` is the start of the recording. For example, 0–10 s at 500 Hz gives `[1 5000]`.
+- The imported segment starts at **time 0 / sample 1** in `EEG.data` (`EEG.xmin = 0`), following EEGLAB conventions for continuous data. Marker latencies are shifted accordingly, and markers outside the segment are dropped.
+- The original timeline is preserved:
+  - `EEG.etc.bvrf.sampleInterval` – `[first last]` in the original recording (1-based).
+  - `EEG.etc.bvrf.fileSampleOffset` – `first - 1`, the 0-based file sample of `EEG.data(:,1)`.
+  - `EEG.event(k).bv_sample` – the marker's original 0-based file sample.
+
+  The relation is `EEG.event(k).latency = EEG.event(k).bv_sample - EEG.etc.bvrf.fileSampleOffset + 1`.
 
 ## How BVRF fields map to EEGLAB
 This section describes how `eeg_loadbvrf` converts a BVRF dataset into the `EEG` structures, one per participant.
@@ -122,7 +138,7 @@ This section describes how `eeg_loadbvrf` converts a BVRF dataset into the `EEG`
 | `EEG.srate`  | Sampling rate from the header (`SamplingFrequencyInHertz`). |
 | `EEG.trials` | Always `1` (continuous data). |
 | `EEG.xmin`   | `0`. |
-| `EEG.xmax`   | `EEG.pnts / EEG.srate`. |
+| `EEG.xmax`   | `(EEG.pnts - 1) / EEG.srate`. |
 | `EEG.comments` | Contains `Original file: <full path to .bvrh>` to document the source. |
 
 ### 2. Participants and Dataset Naming
@@ -181,10 +197,10 @@ Markers without a participant ID or marked “all participants” are assigned t
 | EEGLAB Field | Source / Meaning |
 | ------------ | ---------------- |
 | `type`       | Built from BVRF `Type`, `Code`, `Value`: (1) `Type/Code/Value`, (2) `Type/Code`, (3) `Type/Value`, or (4) `Type` alone. If `Type` is missing, a default `"Marker"` label is used. |
-| `latency`    | Determined in this order: (1) `Sample` (preferred), (2) `SampleIndex`, (3) `Time` converted to samples via `1 + round(Time * srate)`. |
+| `latency`    | Determined in this order: (1) `Sample` (preferred), (2) `SampleIndex`, (3) `Time` converted to a 0-based sample via `round(Time * srate)`. The 0-based file sample `s0` is then converted to a 1-based latency relative to the first imported sample: `latency = s0 + 1 - (first - 1)`. Markers outside the imported interval are dropped. |
 | `comment`    | BVRF `Comment` field or empty if missing. |
 
-The BVRF is a zero-based data format, meaning that the first element of an array has a zero index. This contrasts with MATLAB, which employs one-indexing, where the first sample has an index of one. As a result, when importing BVRF marker latencies into MATLAB/EEGLAB, it is necessary to adjust for this difference in indexing. This adjustment is particularly important when importing the latencies of the markers, which involves adding one (+1) to account for the difference.
+The BVRF is a zero-based data format, meaning that the first element of an array has a zero index. This contrasts with MATLAB, which employs one-indexing, where the first sample has an index of one. As a result, when importing BVRF marker latencies into MATLAB/EEGLAB, it is necessary to adjust for this difference in indexing. This adjustment is particularly important when importing the latencies of the markers, which involves adding one (+1) to account for the difference. When only a segment `[first last]` is imported, latencies are additionally shifted so that they are relative to the first imported sample (see [Indexing and sample intervals](#indexing-and-sample-intervals)).
 
 #### 5.2 BVRF-Specific Event Fields
 
@@ -195,6 +211,7 @@ These fields retain the original structure of BVRF markers:
 | `bv_type`          | Original BVRF `Type`. |
 | `bv_code`          | BVRF `Code`. |
 | `bv_value`         | BVRF `Value`. |
+| `bv_sample`        | Original 0-based sample index of the marker in the BVRF file (unchanged by segment import). |
 | `bv_StartEndId`    | GUID linking start/end markers of duration events. |
 | `bv_channel`       | Channel associated with the marker (empty = all channels). |
 
@@ -221,6 +238,8 @@ To maintain provenance and allow reconstruction or debugging, the reader stores 
 | `EEG.etc.bvrf_header`  | Full parsed BVRF header (`*.bvrh`). |
 | `EEG.etc.participant_id` | Participant ID. |
 | `EEG.etc.bvrf.references` | Reference definitions from the header. |
+| `EEG.etc.bvrf.sampleInterval` | `[first last]` (1-based, inclusive) position of the imported data in the original recording. |
+| `EEG.etc.bvrf.fileSampleOffset` | `first - 1`: 0-based BVRF sample corresponding to `EEG.data(:,1)`. |
 
 You may remove `EEG.etc.bvrf_header` to reduce dataset size after import.
 

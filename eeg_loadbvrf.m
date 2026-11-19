@@ -11,7 +11,14 @@ function [hdr, ALLEEG] = eeg_loadbvrf(hdrPath, hdrFileName, varargin)
 %                  and impedance (.bvri) files must be in the same folder.
 %
 % Optional 'key', value pairs:
-%   'sampleInterval'       - [first, last] sample indices to read (0-based).
+%   'sampleInterval'       - [first last] sample indices to read, 1-based and
+%                            inclusive (MATLAB convention): [1 1000] returns
+%                            the first 1000 samples. The reader converts to
+%                            the 0-based BVRF file layout internally.
+%                            The first imported sample becomes sample 1
+%                            (time 0) of EEG.data; marker latencies are
+%                            shifted accordingly. The original position is
+%                            kept in EEG.etc.bvrf and EEG.event.bv_sample.
 %                            [] (default) = read all samples.
 %   'channelIndx'          - Indices of channels to import (applied per participant).
 %   'flagImportMarkers'    - true/false (default: true). Import markers → EEG.event.
@@ -37,7 +44,9 @@ function [hdr, ALLEEG] = eeg_loadbvrf(hdrPath, hdrFileName, varargin)
 %   - Participant splitting is done via Channels(k).ParticipantId only.
 %   - Markers are mapped to EEGLAB events as:
 %         EEG.event(k).type    = MarkerType
-%         EEG.event(k).latency = Sample
+%         EEG.event(k).latency = Sample + 1 - (first - 1)
+%                                (1-based, relative to the first imported
+%                                sample; markers outside it are dropped)
 %         EEG.event(k).comment = Comment
 %
 % Author: Alejandro Ojeda, Brain Products GmbH, 2025
@@ -216,10 +225,23 @@ if isempty(opt.sampleInterval)
         end
         fclose(fid);
     end
+    firstSample = 1;
+    lastSample  = size(data, 2);
 else
-    % Read only requested sample interval
-    if numel(opt.sampleInterval) < 2
-        error('Invalid sampleInterval; must be [first last].');
+    % Read only requested sample interval.
+    % sampleInterval is 1-based and inclusive (MATLAB convention); the BVRF
+    % data file is 0-based, so sample k (1-based) starts at file offset k-1.
+    si = opt.sampleInterval;
+    if ~isnumeric(si) || numel(si) ~= 2 || any(~isfinite(si)) || any(si ~= round(si))
+        error('Invalid sampleInterval; must be two integers [first last] (1-based, inclusive).');
+    end
+    firstSample = double(si(1));
+    lastSample  = double(si(2));
+    if firstSample < 1
+        error('Invalid sampleInterval; first sample must be >= 1 (indices are 1-based).');
+    end
+    if lastSample < firstSample
+        error('Invalid sampleInterval; last sample must be >= first sample.');
     end
 
     precisionMap = struct('int16', 2, 'int32', 4, 'single', 4, 'double', 8);
@@ -228,9 +250,21 @@ else
     end
     nBytes = precisionMap.(precision);
 
+    fileInfo     = dir(dataFile);
+    nSamplesFile = floor(fileInfo.bytes / (nChannels * nBytes));
+    if firstSample > nSamplesFile
+        error('Invalid sampleInterval; first sample (%d) exceeds the number of samples in the file (%d).', ...
+              firstSample, nSamplesFile);
+    end
+    if lastSample > nSamplesFile
+        warning('sampleInterval end (%d) exceeds the number of samples in the file (%d); reading up to the last sample.', ...
+                lastSample, nSamplesFile);
+        lastSample = nSamplesFile;
+    end
+
     fid = fopen(dataFile, 'r');
-    fseek(fid, opt.sampleInterval(1) * nChannels * nBytes, 'bof');
-    vec = fread(fid, opt.sampleInterval(2) * nChannels, precision, 'ieee-le');
+    fseek(fid, (firstSample - 1) * nChannels * nBytes, 'bof');
+    vec = fread(fid, (lastSample - firstSample + 1) * nChannels, precision, 'ieee-le');
     fclose(fid);
 
     n        = length(vec);
@@ -466,7 +500,7 @@ for p = 1:nParticipants
     EEG.srate  = double(srate);
     EEG.trials = 1;
     EEG.xmin   = 0;
-    EEG.xmax   = EEG.pnts / EEG.srate;
+    EEG.xmax   = (EEG.pnts - 1) / EEG.srate;
     EEG.comments = [ 'Original file: ' hdrFile ];
 
     % --- subject / condition / setname ---
@@ -500,10 +534,16 @@ for p = 1:nParticipants
         EEG.etc.bvrf.references = [];
     end
 
+    % 2) Position of the imported segment in the original recording.
+    %    EEG.data(:,1) corresponds to sample firstSample (1-based) of the file,
+    %    i.e. 0-based BVRF sample fileSampleOffset.
+    EEG.etc.bvrf.sampleInterval   = [firstSample, firstSample + EEG.pnts - 1];
+    EEG.etc.bvrf.fileSampleOffset = firstSample - 1;
+
     % --- markers -> EEG.event ---
     EEG.event = [];
     if opt.flagImportMarkers && ~isempty(markers) && numel(markers) >= p && ~isempty(markers{p})
-        EEG.event = markers_to_eeg_events(markers{p}, EEG.srate);
+        EEG.event = markers_to_eeg_events(markers{p}, EEG.srate, firstSample, EEG.pnts, opt.verbose);
     end
 
     % --- impedances ---
@@ -637,7 +677,17 @@ end
 %% =====================================================================
 %   Helper: markers_to_eeg_events
 % =====================================================================
-function events = markers_to_eeg_events(markerStructArray, srate)
+function events = markers_to_eeg_events(markerStructArray, srate, firstSample, nPnts, verbose)
+% Marker positions in the BVRF file are 0-based sample indices relative to
+% the start of the recording. EEG latencies are 1-based and relative to the
+% first imported sample (firstSample, 1-based). Hence:
+%     latency = s0 + 1 - (firstSample - 1)
+% Markers falling outside [1 nPnts] are dropped. The original 0-based file
+% sample is kept in events(k).bv_sample.
+
+if nargin < 3 || isempty(firstSample), firstSample = 1;   end
+if nargin < 4 || isempty(nPnts),       nPnts       = Inf; end
+if nargin < 5 || isempty(verbose),     verbose     = false; end
 
 if isempty(markerStructArray)
     events = struct('type', {}, 'latency', {}, 'comment', {});
@@ -648,6 +698,7 @@ nEv    = numel(markerStructArray);
 events = struct('type', cell(1,nEv), ...
     'latency', cell(1,nEv), ...
     'comment', cell(1,nEv),...
+    'bv_sample', cell(1,nEv),...
     'bv_type', cell(1,nEv),...
     'bv_StartEndId',cell(1,nEv), ...
     'bv_channel', cell(1, nEv));
@@ -683,30 +734,37 @@ for k = 1:nEv
         typeStr = bvtypeStr;
     end
 
-    % latency: prefer Sample, fallback to SampleIndex, fallback to Time [s]
-    latency = NaN;
+    % 0-based file sample: prefer Sample, fallback to SampleIndex, fallback to Time [s]
+    s0 = NaN;
     if isfield(mk, 'Sample') && ~isempty(mk.Sample)
-        latency = str2double(string(mk.Sample));
+        s0 = str2double(string(mk.Sample));
 
     elseif isfield(mk, 'SampleIndex') && ~isempty(mk.SampleIndex)
-        latency = str2double(string(mk.SampleIndex));
+        s0 = str2double(string(mk.SampleIndex));
 
     elseif isfield(mk, 'Time') && ~isempty(mk.Time)
-        t = str2double(string(mk.Time));
-        latency = 1 + round(t * srate); % seconds -> sample index
+        t  = str2double(string(mk.Time));
+        s0 = round(t * srate); % seconds -> 0-based sample index
     end
 
-    if isnan(latency) || ~isfinite(latency)
+    if isnan(s0) || ~isfinite(s0)
         continue; % skip invalid
+    end
+
+    % 1-based latency relative to the first imported sample
+    latency = s0 + 1 - (firstSample - 1);
+    if latency < 1 || latency > nPnts
+        continue; % outside imported segment
     end
 
     %% Output Fields
     % Standard EEGLAB  fields
     events(k).type           = typeStr;
-    events(k).latency        = latency + 1; % Adding one to account for the zero indexing of the original value.
+    events(k).latency        = latency;
     events(k).comment        = safe_get(mk, 'Comment', '');
 
     % BV Specific fields
+    events(k).bv_sample      = s0; % original 0-based sample in the BVRF file
     events(k).bv_type        = bvtypeStr;
     events(k).bv_code        = safe_get(mk, 'Code', '');
     events(k).bv_value       = safe_get(mk, 'Value', '');
@@ -717,6 +775,9 @@ end
 
 % Remove any incomplete events (where latency is NaN)
 validMask = arrayfun(@(e) ~isempty(e.latency) && isfinite(e.latency), events);
+if verbose && nnz(~validMask) > 0
+    fprintf('%d marker(s) skipped (invalid position or outside the imported sample interval).\n', nnz(~validMask));
+end
 events    = events(validMask);
 
 end

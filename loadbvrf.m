@@ -6,7 +6,8 @@ function [hdr, participantId, data, channels, markers, impedances] = loadbvrf(hd
 %
 % Inputs:
 %   hdrFile      - Hader file (bvrh). Data (.bvrd) and marker (bvrm) files should be in the same folder.
-%   sampleRange  - [first, last] samples that define the interval to read. Enter [] to read all samples.
+%   sampleRange  - [first, last] samples that define the interval to read, 1-based and inclusive
+%                  (MATLAB convention). Enter [] to read all samples.
 %   flagMetadata - Loads only the header metadata.
 %   verbose      - Optional input. Set to true to display messages. 
 %
@@ -146,14 +147,29 @@ else
         error('EEGModality.BVRFFiles.DataFile.NumericDataType is not supported by the reader')
     end
     nBytes = precisionMap.(precision);
+    if sampleRange(1) < 1 || sampleRange(2) < sampleRange(1)
+        error('Invalid sampleRange interval; must be [first last], 1-based, first <= last')
+    end
+    fileInfo     = dir(dataFile);
+    nSamplesFile = floor(fileInfo.bytes / (nChannels * nBytes));
+    if sampleRange(1) > nSamplesFile
+        error('Invalid sampleRange interval; first sample (%d) exceeds the number of samples in the file (%d).', ...
+              sampleRange(1), nSamplesFile);
+    end
+    if sampleRange(2) > nSamplesFile
+        warning('sampleRange end (%d) exceeds the number of samples in the file (%d); reading up to the last sample.', ...
+                sampleRange(2), nSamplesFile);
+        sampleRange(2) = nSamplesFile;
+    end
     fid = fopen(dataFile, 'r');
-    fseek(fid, sampleRange(1) * nChannels * nBytes, 'bof');
-    vec = fread(fid, sampleRange(2), precision, 'ieee-le');
+    % 1-based inclusive range -> 0-based BVRF file offset
+    fseek(fid, (sampleRange(1) - 1) * nChannels * nBytes, 'bof');
+    vec = fread(fid, (sampleRange(2) - sampleRange(1) + 1) * nChannels, precision, 'ieee-le');
     fclose(fid);
     n = length(vec);
     leftOver = mod(n, nChannels);
     nSamples = (n-leftOver)/nChannels;
-    data = reshape(vec, nChannels, nSamples);
+    data = reshape(vec(1:end-leftOver), nChannels, nSamples);
     clear vec;
 end
 
