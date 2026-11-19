@@ -16,7 +16,9 @@
 %   hdrFileName - Name of the header file (string, '*.bvrh').
 %
 % Optional Key/Value Inputs:
-%   'sampleInterval'       - [firstSample lastSample] to read. Empty [] reads full dataset.
+%   'sampleInterval'       - [firstSample lastSample] to read, 1-based and inclusive
+%                            (MATLAB convention). The first imported sample becomes
+%                            sample 1 (time 0). Empty [] reads full dataset.
 %
 %   'channelIndx'          - Vector of channel indices to import. If empty [], all channels are imported.
 %                             Channel order corresponds to the "Channels" section of the BVRF header
@@ -41,7 +43,7 @@
 %
 % Example:
 %   >> ALLEEG = pop_loadbvrf('/data/subj1/', 'recording.bvrh', ...
-%                            'sampleInterval', [0 100000], ...
+%                            'sampleInterval', [1 100000], ...
 %                            'channelIndx', 1:32, ...
 %                            'flagImportMarkers', true);
 %

@@ -164,8 +164,9 @@ uilist{end+1} = {'style','text','string','End'};
 uilist{end+1} = {'style','text','string','Units'};
 
 %12: Start / End / Units controls
-uilist{end+1} = {'style','edit','string','','tag','edit_start'};
-uilist{end+1} = {'style','edit','string','','tag','edit_end'};
+intervalTip = 'Samples: 1-based, inclusive (1 = first sample). Seconds: 0 = start of recording.';
+uilist{end+1} = {'style','edit','string','','tag','edit_start','tooltipstring',intervalTip};
+uilist{end+1} = {'style','edit','string','','tag','edit_end','tooltipstring',intervalTip};
 uilist{end+1} = {'style','popupmenu','string',popupUnitsStr,'value',1, ...
                  'tag','popup_units'};
 
@@ -231,9 +232,13 @@ if isempty(result{3}) || isempty(result{4})
 else
     range = [str2num(result{3})  str2num(result{4})];
     if strcmp(intervalUnit, 'Samples')
+        % Samples are 1-based and inclusive (MATLAB convention)
         cfg.sampleInterval = range;
     else
-        cfg.sampleInterval  = range*info.srate;
+        % Seconds: t = 0 is the start of the recording (sample 1).
+        % [t1 t2] -> samples [round(t1*srate)+1, round(t2*srate)], so that
+        % e.g. 0-10 s at 500 Hz gives [1 5000] (exactly 5000 samples).
+        cfg.sampleInterval = [round(range(1)*info.srate) + 1, round(range(2)*info.srate)];
     end
 end
 
