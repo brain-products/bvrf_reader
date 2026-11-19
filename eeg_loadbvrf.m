@@ -44,7 +44,9 @@ function [hdr, ALLEEG] = eeg_loadbvrf(hdrPath, hdrFileName, varargin)
 %   - Participant splitting is done via Channels(k).ParticipantId only.
 %   - Markers are mapped to EEGLAB events as:
 %         EEG.event(k).type    = MarkerType
-%         EEG.event(k).latency = Sample
+%         EEG.event(k).latency = Sample + 1 - (first - 1)
+%                                (1-based, relative to the first imported
+%                                sample; markers outside it are dropped)
 %         EEG.event(k).comment = Comment
 %
 % Author: Alejandro Ojeda, Brain Products GmbH, 2025

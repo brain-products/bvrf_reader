@@ -150,6 +150,17 @@ else
     if sampleRange(1) < 1 || sampleRange(2) < sampleRange(1)
         error('Invalid sampleRange interval; must be [first last], 1-based, first <= last')
     end
+    fileInfo     = dir(dataFile);
+    nSamplesFile = floor(fileInfo.bytes / (nChannels * nBytes));
+    if sampleRange(1) > nSamplesFile
+        error('Invalid sampleRange interval; first sample (%d) exceeds the number of samples in the file (%d).', ...
+              sampleRange(1), nSamplesFile);
+    end
+    if sampleRange(2) > nSamplesFile
+        warning('sampleRange end (%d) exceeds the number of samples in the file (%d); reading up to the last sample.', ...
+                sampleRange(2), nSamplesFile);
+        sampleRange(2) = nSamplesFile;
+    end
     fid = fopen(dataFile, 'r');
     % 1-based inclusive range -> 0-based BVRF file offset
     fseek(fid, (sampleRange(1) - 1) * nChannels * nBytes, 'bof');
