@@ -574,8 +574,31 @@ chanlocs = struct('labels', cell(1,nCh), ...
     'Z',      cell(1,nCh));
 
 % Normalize electrodes and sensors from header
-electrodes = normalizeObjectArray(eegMod.Electrodes, 'Electrodes');
-sensors    = normalizeObjectArray(eegMod.Electrodes, 'Sensors');
+electrodes = {};
+sensors    = {};
+if isfield(eegMod, 'Electrodes')
+    electrodes = normalizeObjectArray(eegMod.Electrodes, 'Electrodes');
+end
+if isfield(eegMod, 'Sensors')
+    sensors = normalizeObjectArray(eegMod.Sensors, 'Sensors');
+end
+
+% Coordinate system of the electrode positions
+coordSys = '';
+if isfield(eegMod, 'CoordinateSystems') && isfield(eegMod.CoordinateSystems, 'EEGCoordinateSystem')
+    coordSys = char(string(eegMod.CoordinateSystems.EEGCoordinateSystem));
+end
+
+% Transform from the file's axes to EEGLAB's (ALS: +X nose, +Y left, +Z up)
+orientation = coordsys_orientation(coordSys);
+if isempty(orientation)
+    T = eye(3);
+    warning('eeg_loadbvrf:unknownCoordSys', ...
+        ['Unknown EEGCoordinateSystem "%s"; electrode coordinates ' ...
+        'imported without transformation and may be misoriented.'], coordSys);
+else
+    T = orientation_to_als(orientation);
+end
 
 for k = 1:nCh
     ch = chStruct{k};
@@ -589,12 +612,65 @@ for k = 1:nCh
         sec  = safe_get(plus, 'Section', 'Electrodes');
         [X, Y, Z] = lookup_xyz(name, sec, electrodes, sensors);
     end
+    if ~isempty(X)
+        p = T * [X; Y; Z];
+        X = p(1); Y = p(2); Z = p(3);
+    end
     chanlocs(k).X = X;
     chanlocs(k).Y = Y;
     chanlocs(k).Z = Z;
 end
 end
+%% =====================================================================
+%   Helper: coordsys_orientation
+% =====================================================================
+function orientation = coordsys_orientation(coordSys)
+% Orientation code of a BVRF EEGCoordinateSystem: three letters giving the
+% direction of the file's +X, +Y and +Z axes (R/L, A/P, S/I).
+% To support a new coordinate system, add a row to this table.
+% Returns '' for an unknown system.
+table = {
+    % EEGCoordinateSystem   orientation
+    'Easycap',              'RAS'
+    'CapTrak',              'RAS'
+    'EEGLAB',               'ALS'
+    '',                     'ALS'   % not specified: use coordinates as-is
+    };
+idx = find(strcmpi(table(:,1), coordSys), 1);
+if isempty(idx)
+    orientation = '';
+else
+    orientation = table{idx, 2};
+end
+end
 
+%% =====================================================================
+%   Helper: orientation_to_als
+% =====================================================================
+function T = orientation_to_als(orientation)
+% 3x3 matrix mapping [x;y;z] in the given orientation (e.g. 'RAS', 'LPS')
+% to EEGLAB's ALS orientation (+X anterior, +Y left, +Z superior).
+target = 'ALS';
+opposite = struct('R','L', 'L','R', 'A','P', 'P','A', 'S','I', 'I','S');
+orientation = upper(orientation);
+if numel(orientation) ~= 3 || ~all(isfield(opposite, num2cell(orientation)))
+    error('eeg_loadbvrf:badOrientation', 'Invalid orientation code "%s".', orientation);
+end
+T = zeros(3);
+for i = 1:3                       % EEGLAB axis
+    for j = 1:3                   % file axis
+        if orientation(j) == target(i)
+            T(i,j) = 1;
+        elseif orientation(j) == opposite.(target(i))
+            T(i,j) = -1;
+        end
+    end
+end
+if abs(det(T)) ~= 1
+    error('eeg_loadbvrf:badOrientation', ...
+        'Orientation code "%s" must use each of R/L, A/P, S/I exactly once.', orientation);
+end
+end
 %% =====================================================================
 %   Helper: compute_ref
 % =====================================================================
