@@ -1,0 +1,9 @@
+# Local recordings used by the integration tests (too large to commit)
+Data/
+
+# Local backups and MATLAB autosave files
+backup/
+*.asv
+
+# Test output written by run_bvrf_tests('CI', true)
+test-results/

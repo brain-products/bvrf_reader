@@ -272,6 +272,22 @@ For each channel:
    ```text
    MQ = evalRationalPolyAscending(NV, Num, Denom, ResolutionPerBit)
 
+## Running tests
+
+The unit tests use the MATLAB unit testing framework (`matlab.unittest`) and live in `tests/`. From the repository root, run:
+
+```matlab
+results = run_bvrf_tests;                        % all tests
+results = run_bvrf_tests('Integration', false);  % skip tests on real recordings
+```
+
+- Most tests write small synthetic BVRF files to a temporary folder, so they need no external data. The helpers are in `tests/+bvrftest/`.
+- `tests/fixtures/` holds a tiny two-participant recording that is used as a regression fixture.
+- The integration tests (`tests/tIntegrationRealData.m`) load real recordings from `Data/`, or from the folder in the `BVRF_TEST_DATA` environment variable. When no recordings are found, they are reported as skipped (Incomplete).
+- EEGLAB is not required.
+
+The tests also run on GitHub Actions (`.github/workflows/tests.yml`) for every pull request and every push to `main`. That run uploads JUnit results and code coverage as an artifact.
+
 ## Known limitations
 
 - Importing fiducials and anatomical coordinates is not supported currently

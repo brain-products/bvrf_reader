@@ -161,7 +161,7 @@ if nargin < 2
     else
         % Count per participant using ParticipantId in channels
         chanCounts = zeros(1, nParticipants);
-        uniqueIds = cellfun(@(p) p.Id, hdr.Participants, 'UniformOutput', false);
+        uniqueIds = participantIds;
 
         for ichan =1:numel(channels)
             ChannelsParticipantID{ichan} = safe_get(channels{ichan},'ParticipantId', '');
@@ -218,6 +218,14 @@ else
 end
 
 if nargout == 2
-    com = sprintf('ALLEEG = pop_loadbvrf(''%s'', ''%s'',''participantID'', %s, ''sampleInterval'', %s, ''channelIndx'',%s, ''flagImportMarkers'',  %s, ''flagImportImpedances'', %s, ''usePoly'', %s);', ...
-           hdrPath, hdrFileName, opt.participantId, mat2str(opt.sampleInterval), mat2str(opt.channelIndx), mat2str(opt.flagImportMarkers),mat2str(opt.flagImportImpedances), mat2str(opt.usePoly));
+    % History command: must be valid MATLAB that reproduces this import.
+    quoteStr = @(s) ['''' strrep(char(s), '''', '''''') ''''];
+    if isempty(opt.participantId)
+        pidStr = '[]';
+    else
+        pidStr = quoteStr(string(opt.participantId));
+    end
+    com = sprintf('ALLEEG = pop_loadbvrf(%s, %s, ''participantId'', %s, ''sampleInterval'', %s, ''channelIndx'', %s, ''flagImportMarkers'', %s, ''flagImportImpedances'', %s, ''usePoly'', %s);', ...
+           quoteStr(hdrPath), quoteStr(hdrFileName), pidStr, mat2str(opt.sampleInterval), mat2str(opt.channelIndx), ...
+           mat2str(logical(opt.flagImportMarkers)), mat2str(logical(opt.flagImportImpedances)), mat2str(logical(opt.usePoly)));
 end

@@ -133,8 +133,10 @@ if opt.verbose
     disp(['Reading header: ' hdrFile]);
 end
 txt = fileread(hdrFile);
+% Spaces are not removed from the raw text: whitespace between JSON tokens is
+% ignored by jsondecode, and values such as Task.Name may contain spaces.
+% Leading/trailing whitespace inside values is trimmed after decoding.
 txt(regexp(txt, '\n')) = [];
-txt(regexp(txt, ' '))  = [];
 c = '﻿';
 txt(txt == c)       = [];
 txt(txt == newline) = [];
@@ -144,6 +146,9 @@ try
 catch
     error("Can't parse the header");
 end
+% Invisible leading/trailing spaces (e.g. "Fp1 ") would break matching of
+% names and ids between header sections and the marker file.
+hdr = trimHeaderStrings(hdr);
 
 % Required fields
 if ~isfield(hdr, 'BVRF')
@@ -300,7 +305,10 @@ end
 %   Split data and channels by ParticipantId
 % ----------------------------------------------------------------------
 if isfield(hdr, 'Participants')
-    uniqueIds = cellfun(@(p) p.Id, hdr.Participants, 'UniformOutput', false);
+    % jsondecode returns a struct array when all participants share the same
+    % fields and a cell array otherwise; normalize to a cell array first.
+    participants  = normalizeObjectArray(hdr.Participants, 'Participants');
+    uniqueIds     = cellfun(@(p) p.Id, participants, 'UniformOutput', false);
     nParticipants = numel(uniqueIds);
 
     for ichan =1:numel(channels)

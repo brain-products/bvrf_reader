@@ -1,0 +1,7 @@
+DateTime	Type	Code	Value	Sample	StartEndId	ParticipantId	Channel	Comment
+2024-02-10T08:42:13.123000+01:00	Recording Info	Saving		0	1			all participants, all channels
+2024-02-10T08:42:15.000123+01:00	Stimulus	PS	50	5			Fp1	all participants, one channel
+2024-02-10T08:42:16.123000+01:00	Stimulus	PS	48	7		part-01		one participant, all channels
+2024-02-10T08:42:17.001230+01:00	Annotation	Bad Data		8	2	part-02	GSR	one participant, one channel
+2024-02-10T08:42:18.001230+01:00	Annotation			9	2			
+2024-02-10T08:42:26.001230+01:00	Recording Info			9	1			
