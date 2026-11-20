@@ -47,8 +47,10 @@ if verbose
     disp(['Reading: ' hdrFile]);
 end
 txt = fileread(hdrFile);
+% Spaces are not removed from the raw text: whitespace between JSON tokens is
+% ignored by jsondecode, and values such as Task.Name may contain spaces.
+% Leading/trailing whitespace inside values is trimmed after decoding.
 txt(regexp(txt, '\n')) = [];
-txt(regexp(txt, ' ')) = [];
 c = '﻿';
 txt(txt==c) = [];
 txt(txt == newline) = [];
@@ -57,6 +59,9 @@ try
 catch
     error("Can't parse the header")
 end
+% Invisible leading/trailing spaces (e.g. "Fp1 ") would break matching of
+% names and ids between header sections and the marker file.
+hdr = trimHeaderStrings(hdr);
 
 if flagMetadata
     data = [];

@@ -1,0 +1,156 @@
+{
+  "BVRF": {
+    "Version": "1.0.0"
+  },
+  "BVRFHeaderFile": {
+    "Version": "1.0.0"
+  },
+  "Participants": [
+    {
+      "Id": "part-01"
+    },
+    {
+      "Id": "part-02",
+      "HeadCircumferenceInCentiMeter": 58,
+      "ArtefactDescription": "curly pretty hair"
+    }
+  ],
+  "Institution": {
+    "Name": "World-Best University",
+    "Address": "World-Best-Platz 1",
+    "Department": "Neuro-cognitive Psychology"
+  },
+  "Task": {
+    "Name": "Seeing stuff",
+    "Description": "Participants see various images for which phase, amplitude spectrum, and color vary continuously",
+    "Instructions": "Your task is to detect images when they appear for the 2nd time, only then press the response button with your right/left hand (counterbalanced across participants)"
+  },
+  "RecordingSoftware": {
+    "Name": "BrainVision Recorder 2",
+    "Version": "2.0.0"
+  },
+  "EEGModality": {
+    "BVRFFiles": {
+      "DataFile": {
+        "Version": "1.0.0",
+        "NumericDataType": "Int16",
+        "ChannelCount": 6
+      },
+      "MarkerFile": {
+        "Version": "1.0.0"
+      }
+    },
+    "DataSpecific": {
+      "SamplingFrequencyInHertz": 4
+    },
+    "Electrodes": [
+      {
+        "ParticipantId": "part-01",
+        "Name": "Fp1"
+      },
+      {
+        "ParticipantId": "part-01",
+        "Name": "Cz"
+      },
+      {
+        "ParticipantId": "part-02",
+        "Name": "Fp1"
+      },
+      {
+        "ParticipantId": "part-02",
+        "Name": "Cz"
+      },
+      {
+        "ParticipantId": "part-02",
+        "Name": "REF"
+      }
+    ],
+    "CoordinateSystems": {
+      "EEGCoordinateSystem": "Easycap",
+      "EEGCoordinateUnit": "MM"
+    },
+    "References": [
+      {
+        "ParticipantId": "part-02",
+        "Name": "REF",
+        "Composition": [ { "Name": "REF" } ]
+      }
+    ],
+    "Sensors": [
+      {
+        "ParticipantId": "part-01",
+        "Name": "GSR"
+      },
+      {
+        "ParticipantId": "part-02",
+        "Name": "GSR"
+      }
+    ],
+    "Channels": [
+      {
+        "ParticipantId": "part-02",
+        "Name": "Fp1",
+        "Type": "EEG",
+        "Unit": "µV",
+        "Composition": {
+          "Plus": { "Name": "Fp1" },
+          "Minus": {
+            "Name": "REF",
+            "Section": "References"
+          }
+        }
+      },
+      {
+        "ParticipantId": "part-01",
+        "Name": "Cz",
+        "Type": "EEG",
+        "Unit": "µV",
+        "Composition": { "Plus": { "Name": "Cz" } }
+      },
+      {
+        "ParticipantId": "part-02",
+        "Name": "Cz",
+        "Type": "EEG",
+        "Unit": "µV",
+        "Composition": {
+          "Plus": { "Name": "Cz" },
+          "Minus": {
+            "Name": "REF",
+            "Section": "References"
+          }
+        }
+      },
+      {
+        "ParticipantId": "part-02",
+        "Name": "GSR",
+        "Type": "GSR",
+        "Unit": "S",
+        "Composition": {
+          "Plus": {
+            "Name": "GSR",
+            "Section": "Sensors"
+          }
+        }
+      },
+      {
+        "ParticipantId": "part-01",
+        "Name": "Fp1",
+        "Type": "EEG",
+        "Unit": "µV",
+        "Composition": { "Plus": { "Name": "Fp1" } }
+      },
+      {
+        "ParticipantId": "part-01",
+        "Name": "GSR",
+        "Type": "GSR",
+        "Unit": "S",
+        "Composition": {
+          "Plus": {
+            "Name": "GSR",
+            "Section": "Sensors"
+          }
+        }
+      }
+    ]
+  }
+}
